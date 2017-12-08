@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+  <meta charset=utf-8 />
+  <title>Don't Fence Me In</title>
+  <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>  
+  <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.42.2/mapbox-gl.js'></script>
+  <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.42.2/mapbox-gl.css' rel='stylesheet' />
+  <style>
+    body {
+        margin: 0;
+        padding: 0;
+    }
+    
+    #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+    }
+    .marker {
+        background-image: url('assets/metaltoad.jpg');
+        background-size: cover;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+    <div id='map'></div>
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoiZ2VtaW5pY2EiLCJhIjoiNjM5ZjdkNDI0OWZkNGVmMzJlZGUwZjFlYTNkZjU4NGYifQ.BMp74b7SVszf66pxAP_tSg';
+        var map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/light-v9',
+            center: [-122.667918, 45.522127],
+            zoom: 11
+        });
+        var el = document.createElement('div');
+        el.className = 'marker';
+
+        map.on('load', function() {
+            map.addSource('Freeways', {
+                type: 'geojson',
+                data: 'geojson/portland_oregon_roads_gen1.json'
+            });
+            map.addSource('Routes', {
+                type: 'geojson',
+                "data": {
+                    "type": "Feature",
+                    "properties": {},
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": [ 
+                            [-122.685968, 45.475835],
+                            [-122.69031824396589, 45.47901511227021],
+                            [-122.69476245042179, 45.482130430127164],
+                            [-122.69978656658095, 45.484774142751434],
+                            [-122.70605674215447, 45.4846122417454],
+                            [-122.71215788119542, 45.48564240204911]
+                        ]
+                    }
+                }
+            });
+  
+            map.addLayer({
+                id: 'freeways',
+                type: 'line',
+                source: 'Freeways',
+                layout: {
+                    'line-miter-limit': 1,
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                paint: {
+                    'line-color': 'yellow',
+                    'line-width': 5,
+                    'line-opacity': 1,
+                    'line-blur': 0
+                }
+            }); 
+            map.addLayer({
+                id: 'routes',
+                type: 'line',
+                source: 'Routes',
+                layout: {
+                    'line-miter-limit': 1,
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                paint: {
+                    'line-color': 'blue',
+                    'line-width': 3,
+                    'line-opacity': .8
+                }
+            }); 
+            map.setFilter('freeways', ['==', 'type', 'motorway']);
+            
+            map.on('click', function(e) {
+                //get the spatial features where your mouse is currently located. 
+                //note we use the pixel location (e.point) and not lat/lon here.
+                //also specify the feature we want to pay attention 
+                //to - 'academic_positions'
+                new mapboxgl.Marker(el).setLngLat(e.lngLat).addTo(map);
+
+                var params = [e.lngLat, map.getZoom()];
+                console.log(params)
+                //TODO: Hit API with params
+
+                
+            });
+            var popup = new mapboxgl.Popup({
+                    closeButton: false,
+                    closeOnClick: false
+                });
+
+                map.on('mouseenter', 'routes', function(e) {
+                    // Change the cursor style as a UI indicator.
+                    map.getCanvas().style.cursor = 'pointer';
+
+                    // Populate the popup and set its coordinates
+                    // based on the feature found.
+
+                    console.log();
+                    popup.setLngLat(e.lngLat)
+                        .setHTML("<p><b>Distance traveled:</b> " + turf.length(e.features[0].geometry, {"unit":"miles"}).toFixed(3) + " miles</p>")
+                        .addTo(map);
+                });
+                map.on('mouseleave', 'routes', function() {
+                    map.getCanvas().style.cursor = '';
+                    popup.remove();
+                });
+        });
+    </script>
+</body>
+</html>
